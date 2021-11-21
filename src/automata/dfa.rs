@@ -1,4 +1,7 @@
-use crate::{matches::Matcher, nfa::Nfa, state_machine::StateMachine};
+use super::Nfa;
+use super::StateMachine;
+use crate::matches::Matcher;
+
 use rayon::prelude::*;
 use std::{
     collections::{BTreeMap, BTreeSet, HashMap, HashSet, VecDeque},
@@ -96,11 +99,9 @@ where
     #[inline]
     pub fn optimize(&mut self) {
         let mut other_state: BTreeSet<S> = self.end_state.union(&self.all_state).copied().collect();
-        let mut result = HashSet::with_capacity(self.all_state.len());
-        while !other_state.is_empty() && !self.end_state.is_empty() {
-        }
-        for i in 0..result.len() {
-        }
+        // let mut result = HashSet::with_capacity(self.all_state.len());
+        // while !other_state.is_empty() && !self.end_state.is_empty() {}
+        // for i in 0..result.len() {}
     }
 }
 
@@ -276,7 +277,7 @@ macro_rules! Dfa {
         )+}
     }=> {
         {
-            let mut dfa = $crate::dfa::Dfa::new($start);
+            let mut dfa = $crate::automata::Dfa::new($start);
             $(dfa.add_end_state($end);)+
             $(dfa.add_edges($from, $v, $to).unwrap();)*
             dfa
@@ -286,7 +287,7 @@ macro_rules! Dfa {
 
 #[cfg(test)]
 mod test_dfa {
-    use crate::action::Action;
+    use super::super::Action;
     use crate::matches::Matcher;
     #[test]
     fn dfa_macro() {

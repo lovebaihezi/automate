@@ -4,11 +4,9 @@ use std::{
     rc::{Rc, Weak},
 };
 
-use crate::{
-    action::Action,
-    matches::{Matcher, Matches},
-    state_machine::StateMachine,
-};
+use super::Action;
+use super::StateMachine;
+use crate::matches::{Matcher, Matches};
 
 /*
  * the NFA will have the multiply start point
