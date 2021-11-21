@@ -1,0 +1,17 @@
+[package]
+name = "regex-dfa"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+chrono = "*"
+colored = "*"
+tokio = { version = "*", features = ["full"] }
+rayon = "*"
+regex = "*"
+crossbeam = "*"
+tracing = "*"
+tracing-subscriber = "*"
+
