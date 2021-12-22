@@ -159,7 +159,7 @@ where
         let init: Vec<S> = closure(&nfa, &mut [nfa.start_state].iter())
             .into_iter()
             .collect();
-        let mut map: HashMap<Vec<S>, usize> = [(init.clone(), 0)].into_iter().collect();
+        let mut map: HashMap<Vec<S>, usize> = [(init.clone(), 0)].into();
         let mut v = vec![(init, BTreeMap::new())];
         let mut top = 0usize;
         let mut store = Vec::new();
@@ -307,4 +307,6 @@ mod test_dfa {
             Vec::<Vec<Action<char>>>::new()
         );
     }
+    #[test]
+    fn determine_nfa() {}
 }

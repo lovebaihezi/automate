@@ -4,9 +4,8 @@ use std::{
     rc::{Rc, Weak},
 };
 
-use super::Action;
 use super::StateMachine;
-use crate::matches::{Matcher, Matches};
+use crate::matches::Matcher;
 
 /*
  * the NFA will have the multiply start point
@@ -157,7 +156,7 @@ where
     #[inline]
     fn next_state(&self, path: &Self::State, v: &Self::V) -> Option<Self::NextState> {
         if let Some(s) = self.maps.get(path) {
-            s.get(v).map(|s| Rc::downgrade(s))
+            s.get(v).map(Rc::downgrade)
         } else {
             None
         }

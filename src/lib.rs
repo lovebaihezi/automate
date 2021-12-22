@@ -1,2 +1,2 @@
 pub mod matches;
-mod automata;
+mod automate;
