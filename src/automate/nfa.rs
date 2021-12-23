@@ -1,7 +1,6 @@
 use std::{
-    collections::{BTreeMap, BTreeSet, HashSet},
+    collections::{BTreeMap, BTreeSet, HashSet, VecDeque},
     hash::Hash,
-    rc::{Rc, Weak},
 };
 
 use super::StateMachine;
@@ -13,7 +12,7 @@ use crate::matches::Matcher;
  * but we still can store the start point visited because
  * the start point is special and it will and always been used.
  */
-type StateSet<T> = Rc<BTreeSet<T>>;
+type StateSet<T> = BTreeSet<T>;
 
 #[derive(Debug)]
 pub struct Nfa<S, V>
@@ -37,19 +36,14 @@ where
     pub fn new(start_state: S) -> Self {
         Self {
             start_state,
-            end_state: HashSet::new(),
+            end_state: Default::default(),
             all_state: Default::default(),
             maps: Default::default(),
             all_path: Default::default(),
         }
     }
     #[inline]
-    pub fn with_capacity(
-        start_state: S,
-        start_state_amount: usize,
-        end_state_amount: usize,
-        all_state_amount: usize,
-    ) -> Self {
+    pub fn with_capacity(start_state: S, end_state_amount: usize, all_state_amount: usize) -> Self {
         Self {
             start_state,
             end_state: HashSet::with_capacity(end_state_amount),
@@ -65,18 +59,12 @@ where
         }
         if let Some(x) = self.maps.get_mut(&from) {
             if let Some(x) = x.get_mut(&v) {
-                Rc::get_mut(x).unwrap().insert(to);
+                x.insert(to);
             } else {
-                let mut set: BTreeSet<S> = BTreeSet::new();
-                set.insert(to);
-                x.insert(v, Rc::new(set));
+                x.insert(v, [to].into());
             }
         } else {
-            let mut map = BTreeMap::new();
-            let mut set = BTreeSet::new();
-            set.insert(to);
-            map.insert(v, Rc::new(set));
-            self.maps.insert(from, map);
+            self.maps.insert(from, [(v, [to].into())].into());
         }
     }
     #[inline]
@@ -104,7 +92,19 @@ where
     #[inline]
     pub fn closure(&self, state: &S) -> HashSet<S> {
         let mut set = HashSet::with_capacity(self.maps.len());
-        self.closure_recursion(state, &mut set);
+        let mut queue: VecDeque<&S> = [state].into();
+        queue.reserve(self.all_state.len());
+        while !queue.is_empty() {
+            let top = queue.pop_back().unwrap();
+            if !set.contains(top) {
+                if let Some(map) = self.maps.get(top) {
+                    if let Some(closure) = map.get(&None) {
+                        queue.extend(closure.iter());
+                        set.extend(closure.iter().copied());
+                    }
+                }
+            }
+        }
         set
     }
     #[inline]
@@ -112,9 +112,7 @@ where
         let mut set = HashSet::new();
         if let Some(map) = self.maps.get(state) {
             if let Some(s) = map.get(&Some(*path)) {
-                for i in s.iter() {
-                    set.insert(*i);
-                }
+                set.extend(s.iter());
             }
         }
         set
@@ -134,7 +132,7 @@ where
         v: &Option<V>,
         visited: &mut BTreeMap<S, BTreeSet<S>>,
     ) -> Option<S> {
-        let get_next = |set: Rc<BTreeSet<S>>| {
+        let get_next = |set: BTreeSet<_>| {
             visited.get_mut(state).and_then(|visit| {
                 set.iter().fold(None, |s, v| {
                     s.or_else(|| if visit.contains(v) { s } else { Some(*v) })
@@ -145,31 +143,26 @@ where
     }
 }
 
-impl<S, V> StateMachine for Nfa<S, V>
+impl<'a, S, V> StateMachine for &'a Nfa<S, V>
 where
     S: Hash + Eq + Ord + Copy,
     V: Hash + Eq + Ord,
 {
     type State = S;
     type V = Option<V>;
-    type NextState = Weak<BTreeSet<S>>;
-    #[inline]
-    fn next_state(&self, path: &Self::State, v: &Self::V) -> Option<Self::NextState> {
-        if let Some(s) = self.maps.get(path) {
-            s.get(v).map(Rc::downgrade)
-        } else {
-            None
-        }
-    }
+    type NextState = &'a StateSet<S>;
     #[inline]
     fn is_end(&self, state: &S) -> bool {
         self.end_state.get(state).is_some()
     }
-}
-
-#[inline]
-fn add_visited<S: Hash + Ord + Copy>(visited: &mut BTreeMap<S, BTreeSet<S>>, state: &S, s: S) {
-    visited.get_mut(state).map(|set| set.insert(s));
+    #[inline]
+    fn next_state(&self, path: &Self::State, v: &Self::V) -> Option<Self::NextState> {
+        if let Some(s) = self.maps.get(path) {
+            s.get(v)
+        } else {
+            None
+        }
+    }
 }
 
 /*
@@ -198,11 +191,10 @@ where
      *
      */
     fn r#match(&self, iter: &mut I) -> Option<Self::Matched> {
-        let mut stack: Vec<V> = if let (_, Some(x)) = iter.size_hint() {
-            Vec::with_capacity(x)
-        } else {
-            Vec::with_capacity(iter.size_hint().0)
-        };
+        let mut stack: Vec<V> = Vec::with_capacity(match iter.size_hint() {
+            (_, Some(x)) => x,
+            (x, _) => x,
+        });
         /*
          * what shall we store in the visited?
          * (state, v) => {state...}
@@ -250,7 +242,7 @@ where
                             //question: if current is not equal to stack.len(),what shall we do?
                         } else {
                             current_top += 1;
-                            add_visited(&mut visited, state, next_state);
+                            visited.get_mut(state).map(|set| set.insert(next_state));
                             store.push(next_state);
                         }
                     } else {
@@ -267,6 +259,8 @@ where
 
 #[cfg(test)]
 mod nfa_test {
+    #[test]
+    fn closure_calculate() {}
     #[test]
     fn nfa_match() {}
 }

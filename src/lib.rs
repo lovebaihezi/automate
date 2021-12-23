@@ -1,2 +1,2 @@
-pub mod matches;
 mod automate;
+pub mod matches;

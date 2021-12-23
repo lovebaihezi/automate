@@ -38,16 +38,6 @@ where
     maped: BTreeMap<S, BTreeMap<V, S>>,
 }
 
-impl<S, V> Display for Dfa<S, V>
-where
-    S: Display + Hash + Eq + Ord,
-    V: Display + Hash + Eq + Ord,
-{
-    fn fmt(&self, format: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        todo!()
-    }
-}
-
 impl<S, V> Dfa<S, V>
 where
     S: Hash + Eq + Ord + Copy,
@@ -150,13 +140,13 @@ where
     }
 }
 
-impl<S, V> From<Nfa<S, V>> for Dfa<usize, V>
+impl<'a, S, V> From<&'a Nfa<S, V>> for Dfa<usize, V>
 where
     S: Hash + Ord + Eq + Copy + Default,
     V: Hash + Ord + Eq + Copy,
 {
-    fn from(nfa: Nfa<S, V>) -> Self {
-        let init: Vec<S> = closure(&nfa, &mut [nfa.start_state].iter())
+    fn from(nfa: &'a Nfa<S, V>) -> Self {
+        let init: Vec<S> = closure(nfa, &mut [nfa.start_state].iter())
             .into_iter()
             .collect();
         let mut map: HashMap<Vec<S>, usize> = [(init.clone(), 0)].into();
@@ -167,12 +157,12 @@ where
             let c = top;
             top = v.len();
             for (i, (new_state, path_map)) in v[c..].iter_mut().enumerate() {
-                let closure = closure(&nfa, &mut new_state.iter());
+                let closure = closure(nfa, &mut new_state.iter());
                 for path in nfa.all_path.iter() {
                     let new_set: Vec<S> = closure
                         .iter()
                         .copied()
-                        .chain(move_t(&nfa, &mut closure.iter(), path).into_iter())
+                        .chain(move_t(nfa, &mut closure.iter(), path).into_iter())
                         .collect();
                     if !new_set.is_empty() {
                         if !map.contains_key(&new_set) {
@@ -277,7 +267,7 @@ macro_rules! Dfa {
         )+}
     }=> {
         {
-            let mut dfa = $crate::automata::Dfa::new($start);
+            let mut dfa = $crate::automate::Dfa::new($start);
             $(dfa.add_end_state($end);)+
             $(dfa.add_edges($from, $v, $to).unwrap();)*
             dfa
