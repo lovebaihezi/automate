@@ -2,7 +2,6 @@ use super::Nfa;
 use super::StateMachine;
 use crate::matches::Matcher;
 
-use rayon::prelude::*;
 use std::{
     collections::{BTreeMap, BTreeSet, HashMap, HashSet, VecDeque},
     fmt::{Debug, Display},
@@ -34,7 +33,6 @@ where
 {
     start_state: S,
     end_state: HashSet<S>,
-    all_state: HashSet<S>,
     maped: BTreeMap<S, BTreeMap<V, S>>,
 }
 
@@ -48,20 +46,20 @@ where
         Self {
             start_state,
             end_state: HashSet::new(),
-            all_state: Default::default(),
             maped: Default::default(),
         }
     }
     #[inline]
-    pub fn with_capacity(start_state: S, end_state_amount: usize, all_state_amount: usize) -> Self {
+    pub fn with_capacity(start_state: S, end_state_amount: usize) -> Self {
         Self {
             start_state,
             end_state: HashSet::with_capacity(end_state_amount),
-            all_state: HashSet::with_capacity(all_state_amount),
             maped: Default::default(),
         }
     }
     #[inline]
+    // Add edges for the DFA will be more easily then add the same thing in NFA,
+    // you may like to add mulitpy states for an edge, and low level api will be more willing to be applied
     pub fn add_edges(&mut self, from: S, v: V, to: S) -> Result<(), DfaError> {
         if let Some(map) = self.maped.get_mut(&from) {
             if map.get(&v).is_some() {
@@ -88,7 +86,6 @@ where
     }
     #[inline]
     pub fn optimize(&mut self) {
-        let mut other_state: BTreeSet<S> = self.end_state.union(&self.all_state).copied().collect();
         // let mut result = HashSet::with_capacity(self.all_state.len());
         // while !other_state.is_empty() && !self.end_state.is_empty() {}
         // for i in 0..result.len() {}
@@ -120,9 +117,7 @@ where
 {
     let mut result = BTreeSet::new();
     set.map(|state| nfa.move_t(state, path)).for_each(|set| {
-        for state in set.into_iter() {
-            result.insert(state);
-        }
+        result.extend(set.into_iter());
     });
     result
 }
@@ -149,6 +144,7 @@ where
         let init: Vec<S> = closure(nfa, &mut [nfa.start_state].iter())
             .into_iter()
             .collect();
+        // map will store the relationship between the new Graph Node and the index in path_map
         let mut map: HashMap<Vec<S>, usize> = [(init.clone(), 0)].into();
         let mut v = vec![(init, BTreeMap::new())];
         let mut top = 0usize;
@@ -277,8 +273,8 @@ macro_rules! Dfa {
 
 #[cfg(test)]
 mod test_dfa {
-    use super::super::Action;
-    use crate::matches::Matcher;
+    use super::{super::Action};
+    use crate::{matches::Matcher, automate::Nfa};
     #[test]
     fn dfa_macro() {
         let dfa = Dfa! {
@@ -298,5 +294,6 @@ mod test_dfa {
         );
     }
     #[test]
-    fn determine_nfa() {}
+    fn determine_nfa() {
+    }
 }

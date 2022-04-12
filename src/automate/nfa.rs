@@ -119,6 +119,12 @@ where
     }
 }
 
+macro_rules! Nfa {
+	() => {
+
+	};
+}
+
 impl<S, V> Nfa<S, V>
 where
     S: Hash + Eq + Ord + Copy,
@@ -191,7 +197,7 @@ where
      *
      */
     fn r#match(&self, iter: &mut I) -> Option<Self::Matched> {
-        let mut stack: Vec<V> = Vec::with_capacity(match iter.size_hint() {
+        let mut stack = Vec::<V>::with_capacity(match iter.size_hint() {
             (_, Some(x)) => x,
             (x, _) => x,
         });
@@ -208,7 +214,7 @@ where
          *    all the v have already store in the maps, we could add it to the stack for the final
          *    result!
          */
-        let mut visited: BTreeMap<S, BTreeSet<S>> = Default::default();
+        let mut visited: BTreeMap<_, _> = Default::default();
         let mut store: Vec<S> = Vec::with_capacity(self.all_state.len());
         let mut current_top = 0usize;
         store.push(self.start_state);
